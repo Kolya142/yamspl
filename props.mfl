@@ -1,0 +1,54 @@
+form or_swap:  (A or B) -> (B or A)
+form or_atrue:  (A or B) -> t
+form or_afalse:  (A or B) -> B
+form or_btrue: (A or B) -> t
+form or_bfalse: (A or B) -> A
+form or_left:  (A or B) -> A
+form or_right:  (A or B) -> B
+form or_same:  (A or A) -> A
+
+form or_eval:  (f or f) -> f
+form or_eval:  (f or t) -> t
+form or_eval:  (t or f) -> t
+form or_eval:  (t or t) -> t
+
+form and_swap: (A and B) -> (B and A)
+form and_atrue: (A and B) -> B
+form and_afalse: (A and B) -> f
+form and_btrue: (A and B) -> A
+form and_bfalse: (A and B) -> f
+form and_left: (A and B) -> A
+form and_right: (A and B) -> B
+form and_same:  (A and A) -> A
+
+form and_eval:  (f and f) -> f
+form and_eval:  (f and t) -> f
+form and_eval:  (t and f) -> f
+form and_eval:  (t and t) -> t
+
+// A -> B | B∨¬A
+form lr_to_rl: (A lr B) -> (B rl A)
+form lr_btrue: (A lr B) -> t
+form lr_left: (A lr B) -> A
+form lr_right: (A lr B) -> B
+
+form lr_eval:  (f lr f) -> t
+form lr_eval:  (f lr t) -> t
+form lr_eval:  (t lr f) -> f
+form lr_eval:  (t lr t) -> t
+
+// A <- B | A∨¬B
+form rl_to_lr: (A rl B) -> (B lr A)
+form rl_atrue: (A rl B) -> f
+form rl_left: (A rl B) -> A
+form rl_right: (A rl B) -> B
+
+form rl_eval:  (f rl f) -> t
+form rl_eval:  (f rl t) -> f
+form rl_eval:  (t rl f) -> t
+form rl_eval:  (t rl t) -> t
+
+form not_value: (not A) -> A
+
+form not_eval: (not t) -> f
+form not_eval: (not f) -> t

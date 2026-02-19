@@ -1,0 +1,19 @@
+Syntax:
+
+Symbol ::= {alnum | "_"}+
+String ::= "'" string "'"
+GRAVE ::= "`"
+
+Let ::= "let" Symbol ":" Expr
+Define_Transformation ::= "form" Symbol ":" Expr "->" Expr
+Unlink ::= "unlink" Symbol
+Show ::= "show" Expr
+Include ::= "include" String
+Stmt ::= Let | Define_Transformation | Unlink | Show | Include
+
+Call ::= Symbol GRAVE? "[" Expr "]"
+Tuple ::= "(" Expr* ")"
+Expr ::= GRAVE? {Symbol | Call | Tuple}
+
+
+TBD...

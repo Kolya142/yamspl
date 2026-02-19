@@ -1,0 +1,21 @@
+include 'props.mfl'
+
+print 'We want to proof that the expression `¬P∨Q\' can be transformed to the expression `P→Q\''
+
+let stmt : ((not P) or Q)
+
+show stmt
+
+print 'Any expression `B∨A\' is a logical equivalent to a corresponding expression `A∨B\''
+
+let stmt : or_swap[stmt]
+
+show stmt
+
+print 'The expression `Q∨¬P\' is a logical equivalent to the expression `P→Q\' that we want to achieve'
+
+let stmt : (not_value[or_right[stmt]] lr or_left[stmt])
+
+show stmt
+
+print 'WOOOOW!!1!'

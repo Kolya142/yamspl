@@ -1,0 +1,13 @@
+include 'peano.mfl'
+
+form iterp: (A add (s B)) -> iterp[((s A) add B)]
+form iterp: (A add 0) -> A
+form iterp: (A add B) -> iterp[(iterp[A] add iterp[B])]
+form iterp: (A mul (s B)) -> iterp[(A add (A mul B))]
+form iterp: (A mul 0) -> 0
+form iterp: A -> A
+
+// RECURSION!!!!
+let stmt: (_TOPEANO[6] mul _TOPEANO[6])
+let stmt: iterp[stmt]
+show _INCLVL[stmt]

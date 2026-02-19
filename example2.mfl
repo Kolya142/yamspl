@@ -1,0 +1,101 @@
+include 'peano.mfl'
+
+let x: (  // 3+4
+  _TOPEANO[3]
+  add
+  _TOPEANO[4]
+)
+
+show x
+
+let x: sum[x]
+show x
+
+let x: sum[x]
+show x
+
+let x: sum[x]
+show x
+
+let x: sum[x]
+show x
+
+let x: sum[x]
+show x
+
+print '3+4 = 7'
+
+let x: _INCLVL[x]
+show x
+
+print '\n\n'
+
+unlink x
+
+let x: (
+  _TOPEANO[4]
+  le
+  _TOPEANO[3]
+)
+
+show x
+
+let x: le[x]
+show x
+
+let x: le[x]
+show x
+
+let x: le[x]
+show x
+
+let x: le[x]
+show x
+
+print '\n\n'
+
+unlink x
+
+let x: (
+  _TOPEANO[3]
+  le
+  _TOPEANO[4]
+)
+
+show x
+
+let x: le[x]
+show x
+
+let x: le[x]
+show x
+
+let x: le[x]
+show x
+
+let x: le[x]
+show x
+
+print '\n\n'
+
+unlink x
+
+let x: (
+  _TOPEANO[5]
+  sub
+  _TOPEANO[3]
+)
+
+show x
+
+let x: sub[x]
+show x
+
+let x: sub[x]
+show x
+
+let x: sub[x]
+show x
+
+let x: sub[x]
+show x

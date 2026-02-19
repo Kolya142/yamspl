@@ -1,0 +1,17 @@
+form sum: (A add (s B)) -> ((s A) add B)
+form sum: (A add 0) -> A
+
+form add_left: (A add B) -> A
+form add_right: (A add B) -> B
+
+form sub: ((s A) sub (s B)) -> (A sub B)
+form sub: (A sub 0) -> A
+form sub: (0 sub B) -> 0
+
+// ≤
+form le: ((s A) le (s B)) -> (A le B)
+form le: (0 le B) -> t
+form le: (A le 0) -> f
+
+form mul: (A mul (s B)) -> (A add (A mul B))
+form mul: (A mul 0) -> A
