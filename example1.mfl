@@ -1,6 +1,6 @@
 include 'props.mfl'
 
-print 'We want to proof that the expression `¬P∨Q\' can be transformed to the expression `P→Q\''
+print 'We want to proof that a expression `¬P∨Q\' can be transformed to a expression `P→Q\''
 
 let stmt : ((not P) or Q)
 
