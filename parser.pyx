@@ -259,7 +259,7 @@ def parse_stmt(e: ParseEnv) -> List[Stmt] | None:
         body = parse_program(e)
         e.expect(TokenKind.RBRACE)
         return [StmtDefFunc(k, name, args, body)]
-    return None
+    raise SyntaxError(f"Unknown statement `{ks}' at {format_loc(k)}")
 
 def parse_program(e: ParseEnv) -> List[Stmt]:
     stmts = []
