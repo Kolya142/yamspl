@@ -8,6 +8,6 @@ form iterp: (A mul 0) -> 0
 form iterp: A -> A
 
 // RECURSION!!!!
-let stmt: (_TOPEANO[6] mul _TOPEANO[6])
-let stmt: iterp[stmt]
+let stmt = (_TOPEANO[6] mul _TOPEANO[6])
+let stmt = iterp[stmt]
 show _INCLVL[stmt]

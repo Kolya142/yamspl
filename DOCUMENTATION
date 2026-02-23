@@ -4,16 +4,18 @@ Symbol ::= {alnum | "_"}+
 String ::= "'" string "'"
 GRAVE ::= "`"
 
-Let ::= "let" Symbol ":" Expr
+Let ::= "let" Symbol "=" Expr
 Define_Transformation ::= "form" Symbol ":" Expr "->" Expr
 Unlink ::= "unlink" Symbol
 Show ::= "show" Expr
 Include ::= "include" String
-Stmt ::= Let | Define_Transformation | Unlink | Show | Include
+Function ::= "func" Symbol "=" "(" {Symbol}* ")" "{" Stmt+ "}"
+Stmt ::= Let | Define_Transformation | Unlink | Show | Include | Function
 
-Call ::= Symbol GRAVE? "[" Expr "]"
+Call ::= Symbol "[" Expr "]"
+CallCT ::= Symbol "`[" Expr "]"
 Tuple ::= "(" Expr* ")"
-Expr ::= GRAVE? {Symbol | Call | Tuple}
+Expr ::= GRAVE? {Symbol | Call | Tuple | CallCT}
 
 
 TBD...

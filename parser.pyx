@@ -1,5 +1,5 @@
-def lexer(text: str) -> List[tuple]:
-    tokens: List[tuple] = []
+def lexer(text: str, filepath: str) -> Sequence[Token]:
+    tokens: List[Token] = []
     i = 0
     ltext = len(text)
     x = 0
@@ -7,22 +7,36 @@ def lexer(text: str) -> List[tuple]:
     while i < ltext:
         c = text[i]
         if c == '(':
-            tokens.append((TokenKind.LPAREN, (x, y)))
+            tokens.append(Token(TokenKind.LPAREN, y, x, filepath))
             x += 1
         elif c == ')':
-            tokens.append((TokenKind.RPAREN, (x, y)))
+            tokens.append(Token(TokenKind.RPAREN, y, x, filepath))
             x += 1
         elif c == '[':
-            tokens.append((TokenKind.LBRACK, (x, y)))
+            tokens.append(Token(TokenKind.LBRACK, y, x, filepath))
             x += 1
         elif c == ']':
-            tokens.append((TokenKind.RBRACK, (x, y)))
+            tokens.append(Token(TokenKind.RBRACK, y, x, filepath))
+            x += 1
+        elif c == '{':
+            tokens.append(Token(TokenKind.LBRACE, y, x, filepath))
+            x += 1
+        elif c == '}':
+            tokens.append(Token(TokenKind.RBRACE, y, x, filepath))
             x += 1
         elif c == ':':
-            tokens.append((TokenKind.COLON, (x, y)))
+            tokens.append(Token(TokenKind.COLON,  y, x, filepath))
+            x += 1
+        elif c == '=':
+            tokens.append(Token(TokenKind.EQUAL,  y, x, filepath))
             x += 1
         elif c == '`':
-            tokens.append((TokenKind.GRAVE, (x, y)))
+            if i + 1 < ltext and text[i + 1] == '[':
+                tokens.append(Token(TokenKind.GRAVE_LPAREN, y, x, filepath))
+                x += 1
+                i += 1
+            else:
+                tokens.append(Token(TokenKind.GRAVE, y, x, filepath))
             x += 1
         elif c == '\'':
             s = ""
@@ -60,14 +74,14 @@ def lexer(text: str) -> List[tuple]:
             if text[i] != '\'':
                 raise SyntaxError(f"Expected `\\'' but got `{text[i]}' after string at {y+1}:{x}")
             x += 1
-            tokens.append((TokenKind.STRING, (sx, y), s))
+            tokens.append(Token(TokenKind.STRING, y, sx, filepath, s))
         elif c == '/' and i+1 < ltext and text[i+1] == '/':
             while i < ltext and text[i] != '\n':
                 i += 1
             x = 0
             y += 1
         elif c == '-' and i+1 < ltext and text[i+1] == '>':
-            tokens.append((TokenKind.ARROW, (x, y)))
+            tokens.append(Token(TokenKind.ARROW, y, x, filepath))
             x += 2
             i += 1
         elif c.isalnum() or c == "_":
@@ -78,7 +92,7 @@ def lexer(text: str) -> List[tuple]:
                 i += 1
                 x += 1
             i -= 1
-            tokens.append((TokenKind.SYMBOL, (sx, y), s))
+            tokens.append(Token(TokenKind.SYMBOL, y, sx, filepath, s))
         elif c == '\n':
             y += 1
             x = 0
@@ -86,120 +100,172 @@ def lexer(text: str) -> List[tuple]:
             x += 1
         else:
             raise SyntaxError(f"Unexpected symbol `{c}' at {y+1}:{x}")
-        i += 1
+        i += 1    
+    tokens.append(Token(TokenKind.EOF, y, x, filepath))
     return tokens
 
-def parse_tuple(tokens: List[tuple], scl: Sequence[str], ft: tuple) -> Tuple[List[tuple], Expr]:
+
+class ParseEnv:
+    tokens: Peekable[Token]
+
+    def __init__(self, tokens: Peekable[Token]) -> None:
+        self.tokens = tokens
+
+    def peek(self) -> Token:
+        a = self.tokens.peek()
+        assert a is not None, "Hmm... Very suspicious"
+        return a
+
+    def next(self) -> Token:
+        a = self.peek()
+        if a.kind == TokenKind.EOF:
+            return a
+        b = self.tokens.next()
+        assert b is not None, "Hmm... Very suspicious"
+        return b
+
+    def expect(self, kind: TokenKind) -> Token:
+        k = self.peek()
+        if k.kind != kind:
+            raise SyntaxError(f"Expected {kind} but got {k.kind}: {format_loc(k)}")
+        self.next()
+        return k
+
+def parse_tuple(e: ParseEnv, ft: Token) -> Expr:
     n = []
-    while tokens:
-        if tokens[0][0] != TokenKind.SYMBOL and tokens[0][0] != TokenKind.LPAREN:
+    while True:
+        x = parse_expr(e)
+        if x is None:
             break
-        tokens, e = parse_expr(tokens, scl)
-        n.append(e)
-    return tokens, ExprTuple(ft, n)
+        n.append(x)
+    return ExprTuple(ft, n)
 
-def parse_expr(tokens: List[tuple], scl: Sequence[str]) -> Tuple[List[tuple], Expr]:
-    if not tokens:
-        raise SyntaxError(f"Expected quote, symbol, or lparen but got EOF: {format_loc(tokens[0], scl)}")
-    if tokens[0][0] == TokenKind.GRAVE:
-        tokens, sentence = parse_expr(tokens[1:], scl)
-        return tokens, ExprQuote(tokens[0], sentence)
-    if tokens[0][0] == TokenKind.SYMBOL:
-        if len(tokens) > 2 and tokens[1][0] == TokenKind.GRAVE and tokens[2][0] == TokenKind.LBRACK:
-            tokens_, arg = parse_expr(tokens[3:], scl)
-            if not tokens:
-                raise SyntaxError(f"Expected rparen but got EOF: {format_loc(tokens[0], scl)}")
-            if tokens_[0][0] != TokenKind.RBRACK:
-                raise SyntaxError(f"Expected rbrack but got {tokens_[0][0]}: {format_loc(tokens_[0], scl)}")
-            return tokens_[1:], ExprCTCall(tokens[0], tokens[0][2], arg)
-        if len(tokens) > 1 and tokens[1][0] == TokenKind.LBRACK:
-            tokens_, arg = parse_expr(tokens[2:], scl)
-            if not tokens:
-                raise SyntaxError(f"Expected rparen but got EOF: {format_loc(tokens[0], scl)}")
-            if tokens_[0][0] != TokenKind.RBRACK:
-                raise SyntaxError(f"Expected rbrack but got {tokens_[0][0]}: {format_loc(tokens_[0], scl)}")
-            return tokens_[1:], ExprCall(tokens[0], tokens[0][2], arg)
-        return tokens[1:], ExprSymbol(tokens[0], tokens[0][2])
-    if tokens[0][0] == TokenKind.LPAREN:
-        tokens, e = parse_tuple(tokens[1:], scl, tokens[0])
-        if not tokens:
-            raise SyntaxError(f"Expected rparen but got EOF: {format_loc(tokens[0], scl)}")
-        if tokens[0][0] != TokenKind.RPAREN:
-            raise SyntaxError(f"Expected rparen but got {tokens[0][0]}: {format_loc(tokens[0], scl)}")
-        return tokens[1:], e
-    raise SyntaxError(f"Failed to parse expression at {format_loc(tokens[0], scl)}")
+def parse_expr(e: ParseEnv) -> Expr | None:
+    k = e.peek()
+    kk = k.kind
+    if kk == TokenKind.GRAVE:
+        ft = e.next()
+        sentence = parse_expr(e)
+        if sentence is None:
+            raise SyntaxError(f"Expected expression at {format_loc(ft)}")
+        return ExprQuote(k, sentence)
+    if kk == TokenKind.SYMBOL:
+        assert k.sym != None
+        kkk = e.next()
+        kkkk = kkk.kind
+        if kkkk == TokenKind.GRAVE_LPAREN:
+            ft = e.next()
+            arg = parse_expr(e)
+            if arg is None:
+                raise SyntaxError(f"Expected expression at {format_loc(ft)}")
+            e.expect(TokenKind.RBRACK)
+            return ExprCTCall(k, k.sym, arg)
+        if kkkk == TokenKind.LBRACK:
+            ft = e.next()
+            arg = parse_expr(e)
+            if arg is None:
+                raise SyntaxError(f"Expected expression at {format_loc(ft)}")
+            e.expect(TokenKind.RBRACK)
+            return ExprCall(k, k.sym, arg)
+        return ExprSymbol(k, k.sym)
+    if kk == TokenKind.LPAREN:
+        e.next()
+        t = parse_tuple(e, k)
+        e.expect(TokenKind.RPAREN)
+        return t
+    return None
 
-def parse_stmt(tokens: List[tuple], scl: Sequence[str]) -> Tuple[List[tuple], List[Stmt]]:
-    if not tokens:
-        raise SyntaxError(f"Expected symbol but got EOF: {format_loc(tokens[0], scl)}")
-    if tokens[0][0] != TokenKind.SYMBOL:
-        raise SyntaxError(f"Expected symbol but got {tokens[0][0]}: {format_loc(tokens[0], scl)}")
-    if tokens[0][2] == "let":
-        ft = tokens[0]
-        if len(tokens) == 1:
-            raise SyntaxError(f"Expected symbol but got EOF: {format_loc(tokens[0], scl)}")
-        if tokens[1][0] != TokenKind.SYMBOL:
-            raise SyntaxError(f"Expected symbol but got {tokens[0][0]}: {format_loc(tokens[0], scl)}")
-        if len(tokens) == 2:
-            raise SyntaxError(f"Expected colon but got EOF: {format_loc(tokens[0], scl)}")
-        if tokens[2][0] != TokenKind.COLON:
-            raise SyntaxError(f"Expected colon but got {tokens[0][0]}: {format_loc(tokens[0], scl)}")
-        name = tokens[1][2]
-        tokens, e = parse_expr(tokens[3:], scl)
-        return tokens, [StmtLet(ft, name, e)]
-    if tokens[0][2] == "form":
-        ft = tokens[0]
-        tokens = tokens[1:]
-        if not tokens:
-            raise SyntaxError(f"Expected symbol but got EOF: {format_loc(tokens[0], scl)}")
-        if tokens[0][0] != TokenKind.SYMBOL:
-            raise SyntaxError(f"Expected symbol but got {tokens[0][0]}: {format_loc(tokens[0], scl)}")
-        name = tokens[0][2]
-        if len(tokens) == 1:
-            raise SyntaxError(f"Expected colon but got EOF: {format_loc(tokens[0], scl)}")
-        if tokens[1][0] != TokenKind.COLON:
-            raise SyntaxError(f"Expected colon but got {tokens[0][0]}: {format_loc(tokens[0], scl)}")
-        tokens, a = parse_expr(tokens[2:], scl)
-        if not tokens:
-            raise SyntaxError(f"Expected arrow but got EOF: {format_loc(tokens[0], scl)}")
-        if tokens[0][0] != TokenKind.ARROW:
-            raise SyntaxError(f"Expected arrow but got {tokens[0][0]}: {format_loc(tokens[0], scl)}")
-        tokens, b = parse_expr(tokens[1:], scl)
-        ia, ib = interpret_expr(a, True, a.token, scl), interpret_expr(b, True, b.token, scl)
+# Dirty code. Yay!!
+
+def parse_stmt(e: ParseEnv) -> List[Stmt] | None:
+    k = e.peek()
+    if k.kind != TokenKind.SYMBOL:
+        return None
+    ks = k.sym
+    e.next()
+    if ks == "let":
+        name = e.expect(TokenKind.SYMBOL).sym
+        assert name != None
+        e.expect(TokenKind.EQUAL)
+        ft = e.peek()
+        d = parse_expr(e)
+        if d is None:
+            raise SyntaxError(f"Expected expression at {format_loc(ft)}")
+        return [StmtLet(k, name, d)]
+    if ks == "form":
+        name = e.expect(TokenKind.SYMBOL).sym
+        assert name is not None
+        e.expect(TokenKind.COLON)
+        ft = e.peek()
+        a = parse_expr(e)
+        if a is None:
+            raise SyntaxError(f"Expected expression at {format_loc(ft)}")
+        e.expect(TokenKind.ARROW)
+        ft = e.peek()
+        b = parse_expr(e)
+        if b is None:
+            raise SyntaxError(f"Expected expression at {format_loc(ft)}")
+        ia, ib = interpret_expr(a, True, a.token), interpret_expr(b, True, b.token)
         if name not in meta_transformations:
             meta_transformations[name] = []
         meta_transformations[name].append((ia, ib))
-        return tokens, [StmtDefForm(ft, name, ia, ib)]
-    if tokens[0][2] == "unlink":
-        if len(tokens) == 1:
-            raise SyntaxError(f"Expected symbol but got EOF: {format_loc(tokens[0], scl)}")
-        if tokens[1][0] != TokenKind.SYMBOL:
-            raise SyntaxError(f"Expected symbol but got {tokens[0][0]}: {format_loc(tokens[0], scl)}")
-        return tokens[2:], [StmtUnlink(tokens[0], tokens[1][2])]
-    if tokens[0][2] == "show":
-        ft = tokens[0]
-        tokens, e = parse_expr(tokens[1:], scl)
-        return tokens, [StmtShow(ft, e)]
-    if tokens[0][2] == "include":
-        if len(tokens) == 1:
-            raise SyntaxError(f"Expected string but got EOF: {format_loc(tokens[0], scl)}")
-        if tokens[1][0] != TokenKind.STRING:
-            raise SyntaxError(f"Expected string but got {tokens[0][0]}: {format_loc(tokens[0], scl)}")
-        c = open(tokens[1][2], "r").read()
-        l = lexer(c)
-        scl = c.split("\n")
-        return tokens[2:], parse_program(l, scl)
-    if tokens[0][2] == "print":
-        if len(tokens) == 1:
-            raise SyntaxError(f"Expected string but got EOF: {format_loc(tokens[0], scl)}")
-        if tokens[1][0] != TokenKind.STRING:
-            raise SyntaxError(f"Expected string but got {tokens[0][0]}: {format_loc(tokens[0], scl)}")
-        return tokens[2:], [StmtPrint(tokens[0], tokens[1][2])]
-    raise SyntaxError(f"Expected `let', `form', 'unlink', `show', `include', or `print' but got `{tokens[0][2]}': {format_loc(tokens[0], scl)}")
 
-def parse_program(tokens: List[tuple], scl: Sequence[str]) -> List[Stmt]:
+        # if inst.name in symbols:
+        #     if symbols[inst.name][1] is not None:
+        #         raise RuntimeError(f"Failed to define transformation `{inst.name}' at {format_loc(inst.token)}\nThis name is already taken by a symbol at {format_loc(symbols[inst.name][1])}")
+        #     else:
+        #         raise RuntimeError(f"Failed to define transformation `{inst.name}' at {format_loc(inst.token)}\nThis name is already taken by a symbol at Somewhere")
+        if name not in transformations:
+            transformations[name] = []
+        transformations[name].append((ia, ib, ft))
+        return []  # StmtDefForm(ft, name, ia, ib)] Unnecessary
+    if ks == "unlink":
+        name = e.expect(TokenKind.SYMBOL).sym
+        assert name is not None
+        return [StmtUnlink(k, name)]
+    if ks == "show":
+        ft = e.peek()
+        t = parse_expr(e)
+        if t is None:
+            raise SyntaxError(f"Expected expression at {format_loc(ft)}")
+        return [StmtShow(k, t)]
+    if ks == "print":
+        text = e.expect(TokenKind.STRING).sym
+        assert text is not None
+        return [StmtPrint(k, text)]
+    if ks == "include":
+        p = e.expect(TokenKind.STRING).sym
+        assert p is not None
+        c = open(p, "r").read()
+        l = lexer(c, p)
+        scl = c.split("\n")
+        r = ParseEnv(PeekableSequence(l))
+        return parse_program(r)
+    if ks == "func":
+        name = e.expect(TokenKind.SYMBOL).sym
+        assert name is not None
+        e.expect(TokenKind.EQUAL)
+        e.expect(TokenKind.LPAREN)
+        args = []
+        while True:
+            k = e.peek()
+            if k.kind != TokenKind.SYMBOL:
+                break
+            assert k.sym is not None
+            args.append(k.sym)
+            e.next()
+        e.expect(TokenKind.RPAREN)
+        e.expect(TokenKind.LBRACE)
+        body = parse_program(e)
+        e.expect(TokenKind.RBRACE)
+        return [StmtDefFunc(k, name, args, body)]
+    return None
+
+def parse_program(e: ParseEnv) -> List[Stmt]:
     stmts = []
-    while tokens:
-        tokens, stmt = parse_stmt(tokens, scl)
+    while True:
+        stmt = parse_stmt(e)
+        if stmt is None:
+            break
         stmts.extend(stmt)
     return stmts

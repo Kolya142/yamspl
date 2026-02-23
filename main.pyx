@@ -9,7 +9,6 @@ if len(sys.argv) != 2:
     sys.exit(1)
 
 c = open(sys.argv[1], "r").read()
-l = lexer(c)
-scl = c.split("\n")
-instructions = parse_program(l, scl)
-interpret_program(instructions, scl)
+l = lexer(c, sys.argv[1])
+instructions = parse_program(ParseEnv(PeekableSequence(l)))
+interpret_program(instructions)
