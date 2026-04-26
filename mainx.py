@@ -1,7 +1,7 @@
-"$!include common.pyx"
-"$!include logic.pyx"
-"$!include parser.pyx"
-"$!include interpretator.pyx"
+"$!include commonx.py"
+"$!include logicx.py"
+"$!include parserx.py"
+"$!include interpretatorx.py"
 import sys
 
 if len(sys.argv) != 2:

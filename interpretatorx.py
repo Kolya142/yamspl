@@ -104,6 +104,7 @@ def interpret_expr(e: Expr, comptime: bool = False, tok: Token | None = None) ->
     assert False, f"Unreachable: {e}"
 
 def is_unresolved(e: SExpr) -> bool:
+
     if isinstance(e, SExprSymbol):
         return False
     if isinstance(e, SExprCall):
