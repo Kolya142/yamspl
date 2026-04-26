@@ -1,4 +1,4 @@
-# A programming language written in Python
+# A programming language
 
 ## Quick start
 
